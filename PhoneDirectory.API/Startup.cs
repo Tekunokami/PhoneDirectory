@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using PhoneDirectory.Application.Services;
 using PhoneDirectory.Domain.Interfaces;
 using PhoneDirectory.Infrastructure.Context;
 using PhoneDirectory.Infrastructure.Repositories;
@@ -39,8 +40,10 @@ namespace PhoneDirectory.API
 
             services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IContactRepository, ContactRepository>();
-
             services.AddSwaggerGen();
+
+            services.AddScoped<IContactService, ContactService>();
+
 
         }
 

@@ -13,6 +13,11 @@ namespace PhoneDirectory.Infrastructure.Repositories
 
         }
 
+        public async Task AddAsync(Contact contact)
+        {
+            await _context.Contacts.AddAsync(contact);
+            await _context.SaveChangesAsync(); // BUNUN MUTLAKA OLMASI LAZIM
+        }
         public async Task<bool> UpdateAsync(Contact contact)
         {
             var existing = await _context.Contacts.FindAsync(contact.Id);

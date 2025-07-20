@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PhoneDirectory.Domain.Entities;
-using PhoneDirectory.Domain.Interfaces;
+using PhoneDirectory.Application.DTOs.Contact;
+using PhoneDirectory.Application.Services;
 using System.Threading.Tasks;
 
 namespace PhoneDirectory.API.Controllers
@@ -10,54 +10,71 @@ namespace PhoneDirectory.API.Controllers
     [Route("api/[controller]")]
     public class ContactController : ControllerBase
     {
-        private readonly IContactRepository _contactRepository;
+        private readonly IContactService _contactService;
 
-        public ContactController(IContactRepository contactRepository)
+        public ContactController(IContactService contactService)
         {
-            _contactRepository = contactRepository;
+            _contactService = contactService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var contacts = await _contactRepository.GetAllAsync();
+            var contacts = await _contactService.GetAllContactsAsync();
             return Ok(contacts);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Add(Contact contact)
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ContactDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetContact(int id)
         {
-            await _contactRepository.AddAsync(contact);
-            await _contactRepository.SaveAsync(); 
+            var contact = await _contactService.GetContactByIdAsync(id);
+            if (contact == null)
+                return NotFound();
+
             return Ok(contact);
         }
 
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, Contact contact)
+        [HttpPost]
+        [ProducesResponseType(typeof(ContactDTO), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Create([FromBody] CreateContactDTO dto)
         {
-            if (id != contact.Id)
-                return BadRequest("ID uyuşmuyor.");
-
-            var updated = await _contactRepository.UpdateAsync(contact);
-            if (!updated)
-                return NotFound("Güncellenecek kişi bulunamadı.");
-
-            await _contactRepository.SaveAsync(); // <-- Burası da
-            return NoContent();
+            var newContact = await _contactService.CreateContactAsync(dto);
+            return CreatedAtAction(nameof(GetContact), new { id = newContact.Id }, newContact);
         }
+
+
+        [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateContact(int id, [FromBody] UpdateContactDTO dto)
+        {
+            if (id != dto.Id)
+                return BadRequest("Route ID and DTO ID do not match.");
+
+            var result = await _contactService.UpdateContactAsync(dto);
+            if (!result)
+                return NotFound();
+
+            return Ok();
+        }
+
 
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteContact(int id)
         {
-            var deleted = await _contactRepository.DeleteAsync(id);
-            if (!deleted)
-                return NotFound("Silinecek kişi bulunamadı.");
+            var result = await _contactService.DeleteContactAsync(id);
+            if (!result)
+                return NotFound();
 
-            await _contactRepository.SaveAsync(); // <-- Ve burası!
-            return NoContent();
+            return Ok();
         }
-
     }
 }
