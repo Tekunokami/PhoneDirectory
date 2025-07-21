@@ -2,7 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using PhoneDirectory.Application.DTOs.Contact;
 using PhoneDirectory.Application.Services;
+using System.IO;
+using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace PhoneDirectory.API.Controllers
 {
@@ -46,6 +49,23 @@ namespace PhoneDirectory.API.Controllers
             return CreatedAtAction(nameof(GetContact), new { id = newContact.Id }, newContact);
         }
 
+        [HttpPost("{id}/upload-photo")]
+        public async Task<IActionResult> UploadPhoto(int id, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("File is empty.");
+
+            using var memoryStream = new MemoryStream();
+            await file.CopyToAsync(memoryStream);
+            var fileBytes = memoryStream.ToArray();
+            var fileExtension = Path.GetExtension(file.FileName);
+
+            var photoPath = await _contactService.SaveProfilePhotoAsync(id, fileBytes, fileExtension);
+
+            return Ok(new { path = photoPath });
+        }
+
+
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -76,5 +96,8 @@ namespace PhoneDirectory.API.Controllers
 
             return Ok();
         }
+
+
+
     }
 }

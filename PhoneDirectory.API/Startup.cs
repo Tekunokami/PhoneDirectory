@@ -5,14 +5,17 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using PhoneDirectory.API.Middlewares;
 using PhoneDirectory.Application.Services;
 using PhoneDirectory.Domain.Interfaces;
 using PhoneDirectory.Infrastructure.Context;
 using PhoneDirectory.Infrastructure.Repositories;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -27,7 +30,6 @@ namespace PhoneDirectory.API
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
@@ -38,6 +40,8 @@ namespace PhoneDirectory.API
                 ));
 
 
+
+
             services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IContactRepository, ContactRepository>();
             services.AddSwaggerGen();
@@ -46,8 +50,6 @@ namespace PhoneDirectory.API
 
 
         }
-
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
@@ -57,9 +59,22 @@ namespace PhoneDirectory.API
 
             app.UseHttpsRedirection();
 
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
+
             app.UseRouting();
 
             app.UseAuthorization();
+
+            app.UseStaticFiles();
+
+
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                    Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads")),
+                RequestPath = "/uploads"
+            });
+
 
             app.UseSwagger();
             app.UseSwaggerUI(c =>

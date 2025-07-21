@@ -13,5 +13,7 @@ namespace PhoneDirectory.Application.Services
         Task<ContactDTO> CreateContactAsync(CreateContactDTO createContactDto);
         Task<bool> UpdateContactAsync(UpdateContactDTO updateContactDto);
         Task<bool> DeleteContactAsync(int id);
+        Task<string> SaveProfilePhotoAsync(int contactId, byte[] fileBytes, string fileExtension);
+
     }
 }
