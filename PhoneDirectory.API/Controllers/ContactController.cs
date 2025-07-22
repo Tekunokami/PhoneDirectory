@@ -6,6 +6,7 @@ using System.IO;
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace PhoneDirectory.API.Controllers
 {
@@ -14,15 +15,19 @@ namespace PhoneDirectory.API.Controllers
     public class ContactController : ControllerBase
     {
         private readonly IContactService _contactService;
+        private readonly ILogger<ContactController> _logger;
 
-        public ContactController(IContactService contactService)
+        public ContactController(IContactService contactService, ILogger<ContactController> logger)
         {
             _contactService = contactService;
+            _logger = logger;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
+            _logger.LogWarning("Test warning from GetAll()");
+            _logger.LogInformation("GetAll() method called at {Time}", DateTime.UtcNow);
             var contacts = await _contactService.GetAllContactsAsync();
             return Ok(contacts);
         }
