@@ -41,6 +41,19 @@ namespace PhoneDirectory.API
                 ));
 
 
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", builder =>
+                {
+                    builder.AllowAnyOrigin()
+                           .AllowAnyMethod()
+                           .AllowAnyHeader();
+                });
+            });
+
+            services.AddControllers();
+
+
 
 
             services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
@@ -66,8 +79,17 @@ namespace PhoneDirectory.API
 
             app.UseAuthorization();
 
-            app.UseStaticFiles();
+            app.UseCors("AllowAll");
 
+
+            var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            if (!Directory.Exists(uploadsPath))
+            {
+                Directory.CreateDirectory(uploadsPath);
+            }
+
+
+            app.UseStaticFiles();
 
             app.UseStaticFiles(new StaticFileOptions
             {
@@ -88,6 +110,8 @@ namespace PhoneDirectory.API
             {
                 endpoints.MapControllers();
             });
+
+
         }
     }
 }
