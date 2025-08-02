@@ -8,27 +8,37 @@ using System.Threading.Tasks;
 using System.Linq;
 using PhoneDirectory.Application.Validators;
 using System.IO;
-
+using System.Globalization;
 
 namespace PhoneDirectory.Application.Services
 {
     public class ContactService : IContactService
     {
+        private readonly IContactRepository _contactRepository;
+
+        public ContactService(IContactRepository contactRepository)
+        {
+            _contactRepository = contactRepository;
+        }
+
         public async Task<List<ContactDTO>> GetAllContactsAsync()
         {
             var contacts = await _contactRepository.GetAllAsync();
 
-            return contacts.Select(c => new ContactDTO
+            return contacts.Select(contact => new ContactDTO
             {
-                Id = c.Id,
-                Name = c.Name,
-                PhoneNumber = c.PhoneNumber,
-                Email = c.Email,
-                Address = c.Address,
-                BirthDate = c.BirthDate,
-                ProfilePhotoPath = c.ProfilePhotoPath
+                Id = contact.Id,
+                Name = contact.Name,
+                PhoneNumber = contact.PhoneNumber,
+                Email = contact.Email,
+                Address = contact.Address,
+                Birthday = contact.BirthDate.ToString("dd.MM.yyyy"),
+                PhotoUrl = contact.ProfilePhotoPath,
+                Note = contact.Note,
+                CreatedAt = contact.CreatedAt
             }).ToList();
         }
+
         public async Task<ContactDTO> GetContactByIdAsync(int id)
         {
             var contact = await _contactRepository.GetByIdAsync(id);
@@ -43,11 +53,12 @@ namespace PhoneDirectory.Application.Services
                 PhoneNumber = contact.PhoneNumber,
                 Email = contact.Email,
                 Address = contact.Address,
-                BirthDate = contact.BirthDate,
-                ProfilePhotoPath = contact.ProfilePhotoPath
+                Birthday = contact.BirthDate.ToString("dd.MM.yyyy"),
+                PhotoUrl = contact.ProfilePhotoPath,
+                Note = contact.Note,
+                CreatedAt = contact.CreatedAt
             };
         }
-
 
         public async Task<ContactDTO> CreateContactAsync(CreateContactDTO createContactDto)
         {
@@ -57,6 +68,9 @@ namespace PhoneDirectory.Application.Services
             if (!validation.IsValid)
                 throw new Exception(string.Join("; ", validation.Errors));
 
+            var birthDateParsed = !string.IsNullOrEmpty(createContactDto.Birthday)
+                ? DateTime.ParseExact(createContactDto.Birthday, "dd.MM.yyyy", CultureInfo.InvariantCulture)
+                : DateTime.MinValue;  // Null değer gelirse default atama (isteğe göre değişebilir)
 
             var contact = new Contact
             {
@@ -64,9 +78,10 @@ namespace PhoneDirectory.Application.Services
                 PhoneNumber = createContactDto.PhoneNumber,
                 Email = createContactDto.Email,
                 Address = createContactDto.Address,
-                BirthDate = createContactDto.BirthDate,
-                ProfilePhotoPath = createContactDto.ProfilePhotoPath,
-                CreatedAt = DateTime.UtcNow 
+                BirthDate = birthDateParsed,
+                ProfilePhotoPath = !string.IsNullOrEmpty(createContactDto.PhotoUrl) ? createContactDto.PhotoUrl : createContactDto.PhotoPath,
+                Note = createContactDto.Note,
+                CreatedAt = DateTime.UtcNow
             };
 
             await _contactRepository.AddAsync(contact);
@@ -78,13 +93,12 @@ namespace PhoneDirectory.Application.Services
                 PhoneNumber = contact.PhoneNumber,
                 Email = contact.Email,
                 Address = contact.Address,
-                BirthDate = contact.BirthDate,
-                ProfilePhotoPath = contact.ProfilePhotoPath,
-                CreatedAt = contact.CreatedAt 
+                Birthday = contact.BirthDate.ToString("dd.MM.yyyy"),
+                PhotoUrl = contact.ProfilePhotoPath,
+                Note = contact.Note,
+                CreatedAt = contact.CreatedAt
             };
         }
-
-
 
         public async Task<bool> UpdateContactAsync(UpdateContactDTO updateContactDto)
         {
@@ -98,12 +112,17 @@ namespace PhoneDirectory.Application.Services
             if (existing == null)
                 return false;
 
+            var birthDateParsed = !string.IsNullOrEmpty(updateContactDto.Birthday)
+                ? DateTime.ParseExact(updateContactDto.Birthday, "dd.MM.yyyy", CultureInfo.InvariantCulture)
+                : existing.BirthDate; // Eğer yeni tarih verilmezse eskisini kullan.
+
             existing.Name = updateContactDto.Name;
             existing.PhoneNumber = updateContactDto.PhoneNumber;
             existing.Email = updateContactDto.Email;
             existing.Address = updateContactDto.Address;
-            existing.BirthDate = updateContactDto.BirthDate;
-            existing.ProfilePhotoPath = updateContactDto.ProfilePhotoPath;
+            existing.BirthDate = birthDateParsed;
+            existing.ProfilePhotoPath = !string.IsNullOrEmpty(updateContactDto.PhotoUrl) ? updateContactDto.PhotoUrl : updateContactDto.PhotoPath;
+            existing.Note = updateContactDto.Note;
 
             await _contactRepository.UpdateAsync(existing);
             return true;
@@ -133,27 +152,14 @@ namespace PhoneDirectory.Application.Services
             return contact.ProfilePhotoPath;
         }
 
-
-
         public async Task<bool> DeleteContactAsync(int id)
         {
             var contact = await _contactRepository.GetByIdAsync(id);
             if (contact == null)
                 return false;
 
-            await _contactRepository.DeleteAsync(id); 
+            await _contactRepository.DeleteAsync(id);
             return true;
         }
-
-
-        private readonly IContactRepository _contactRepository;
-
-        public ContactService(IContactRepository contactRepository)
-        {
-            _contactRepository = contactRepository;
-        }
-
-        
-
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using PhoneDirectory.Application.DTOs.Contact;
 
@@ -22,8 +23,18 @@ namespace PhoneDirectory.Application.Validators
             if (!string.IsNullOrWhiteSpace(dto.Email) && !dto.Email.Contains("@"))
                 result.Errors.Add("Email must contain '@' symbol.");
 
-            if (dto.BirthDate > DateTime.UtcNow)
-                result.Errors.Add("Birth date cannot be in the future.");
+            if (!string.IsNullOrWhiteSpace(dto.Birthday))
+            {
+                if (DateTime.TryParseExact(dto.Birthday, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
+                {
+                    if (parsedDate > DateTime.UtcNow)
+                        result.Errors.Add("Birth date cannot be in the future.");
+                }
+                else
+                {
+                    result.Errors.Add("Invalid birth date format. Please use dd.MM.yyyy.");
+                }
+            }
 
             return result;
         }
