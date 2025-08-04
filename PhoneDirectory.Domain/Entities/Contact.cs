@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+
 
 namespace PhoneDirectory.Domain.Entities
 {
@@ -13,6 +15,8 @@ namespace PhoneDirectory.Domain.Entities
         public string ProfilePhotoPath { get; set; }
         public string Note { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        public ICollection<ContactGroup> ContactGroups { get; set; } = new List<ContactGroup>();
     }
 
 }
