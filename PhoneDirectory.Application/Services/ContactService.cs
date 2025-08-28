@@ -1,138 +1,115 @@
-﻿using PhoneDirectory.Application.DTOs.Contact;
+﻿using AutoMapper;
+using PhoneDirectory.Application.Common.Exceptions;
+using PhoneDirectory.Application.DTOs.Contact;
+using PhoneDirectory.Application.Validators;
 using PhoneDirectory.Domain.Entities;
 using PhoneDirectory.Domain.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using System.Linq;
-using PhoneDirectory.Application.Validators;
 using System.IO;
-using System.Globalization;
+using System.Threading.Tasks;
+using FluentValidation;
 
 namespace PhoneDirectory.Application.Services
 {
     public class ContactService : IContactService
     {
-        private readonly IContactRepository _contactRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public ContactService(IContactRepository contactRepository)
+        public ContactService(IUnitOfWork unitOfWork, IMapper mapper)
         {
-            _contactRepository = contactRepository;
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         public async Task<List<ContactDTO>> GetAllContactsAsync()
         {
-            var contacts = await _contactRepository.GetAllAsync();
-
-            return contacts.Select(contact => new ContactDTO
-            {
-                Id = contact.Id,
-                Name = contact.Name,
-                PhoneNumber = contact.PhoneNumber,
-                Email = contact.Email,
-                Address = contact.Address,
-                Birthday = contact.BirthDate.ToString("dd.MM.yyyy"),
-                PhotoUrl = contact.ProfilePhotoPath,
-                Note = contact.Note,
-                CreatedAt = contact.CreatedAt
-            }).ToList();
+            var contacts = await _unitOfWork.Contacts.GetAllAsync();
+            return _mapper.Map<List<ContactDTO>>(contacts);
         }
 
         public async Task<ContactDTO> GetContactByIdAsync(int id)
         {
-            var contact = await _contactRepository.GetByIdAsync(id);
-
-            if (contact == null)
-                return null;
-
-            return new ContactDTO
-            {
-                Id = contact.Id,
-                Name = contact.Name,
-                PhoneNumber = contact.PhoneNumber,
-                Email = contact.Email,
-                Address = contact.Address,
-                Birthday = contact.BirthDate.ToString("dd.MM.yyyy"),
-                PhotoUrl = contact.ProfilePhotoPath,
-                Note = contact.Note,
-                CreatedAt = contact.CreatedAt
-            };
+            var contact = await _unitOfWork.Contacts.GetByIdAsync(id);
+            return _mapper.Map<ContactDTO>(contact);
         }
 
         public async Task<ContactDTO> CreateContactAsync(CreateContactDTO createContactDto)
         {
             var validator = new CreateContactDTOValidator();
-            var validation = validator.Validate(createContactDto);
-
-            if (!validation.IsValid)
-                throw new Exception(string.Join("; ", validation.Errors));
-
-            var birthDateParsed = !string.IsNullOrEmpty(createContactDto.Birthday)
-                ? DateTime.ParseExact(createContactDto.Birthday, "dd.MM.yyyy", CultureInfo.InvariantCulture)
-                : DateTime.MinValue;  // Null değer gelirse default atama (isteğe göre değişebilir)
-
-            var contact = new Contact
+            var validationResult = await validator.ValidateAsync(createContactDto);
+            if (!validationResult.IsValid)
             {
-                Name = createContactDto.Name,
-                PhoneNumber = createContactDto.PhoneNumber,
-                Email = createContactDto.Email,
-                Address = createContactDto.Address,
-                BirthDate = birthDateParsed,
-                ProfilePhotoPath = !string.IsNullOrEmpty(createContactDto.PhotoUrl) ? createContactDto.PhotoUrl : createContactDto.PhotoPath,
-                Note = createContactDto.Note,
-                CreatedAt = DateTime.UtcNow
-            };
+                throw new ValidationException(validationResult.Errors);
+            }
 
-            await _contactRepository.AddAsync(contact);
+            var contact = _mapper.Map<Contact>(createContactDto);
+            contact.CreatedAt = DateTime.UtcNow;
 
-            return new ContactDTO
-            {
-                Id = contact.Id,
-                Name = contact.Name,
-                PhoneNumber = contact.PhoneNumber,
-                Email = contact.Email,
-                Address = contact.Address,
-                Birthday = contact.BirthDate.ToString("dd.MM.yyyy"),
-                PhotoUrl = contact.ProfilePhotoPath,
-                Note = contact.Note,
-                CreatedAt = contact.CreatedAt
-            };
+            await _unitOfWork.Contacts.AddAsync(contact);
+            await _unitOfWork.CommitAsync();
+
+            return _mapper.Map<ContactDTO>(contact);
         }
 
         public async Task<bool> UpdateContactAsync(UpdateContactDTO updateContactDto)
         {
             var validator = new UpdateContactDTOValidator();
-            var validation = validator.Validate(updateContactDto);
+            var validationResult = await validator.ValidateAsync(updateContactDto); 
+            if (!validationResult.IsValid)
+            {
+                throw new ValidationException(validationResult.Errors);
+            }
 
-            if (!validation.IsValid)
-                throw new Exception(string.Join("; ", validation.Errors));
-
-            var existing = await _contactRepository.GetByIdAsync(updateContactDto.Id);
+            var existing = await _unitOfWork.Contacts.GetByIdAsync(updateContactDto.Id);
             if (existing == null)
                 return false;
 
-            var birthDateParsed = !string.IsNullOrEmpty(updateContactDto.Birthday)
-                ? DateTime.ParseExact(updateContactDto.Birthday, "dd.MM.yyyy", CultureInfo.InvariantCulture)
-                : existing.BirthDate; // Eğer yeni tarih verilmezse eskisini kullan.
+            _mapper.Map(updateContactDto, existing);
+            _unitOfWork.Contacts.Update(existing);
+            await _unitOfWork.CommitAsync();
 
-            existing.Name = updateContactDto.Name;
-            existing.PhoneNumber = updateContactDto.PhoneNumber;
-            existing.Email = updateContactDto.Email;
-            existing.Address = updateContactDto.Address;
-            existing.BirthDate = birthDateParsed;
-            existing.ProfilePhotoPath = !string.IsNullOrEmpty(updateContactDto.PhotoUrl) ? updateContactDto.PhotoUrl : updateContactDto.PhotoPath;
-            existing.Note = updateContactDto.Note;
-
-            await _contactRepository.UpdateAsync(existing);
             return true;
+        }
+
+        public async Task<bool> DeleteContactAsync(int id)
+        {
+            var contact = await _unitOfWork.Contacts.GetByIdAsync(id);
+            if (contact == null)
+                return false;
+
+            _unitOfWork.Contacts.Delete(contact);
+            await _unitOfWork.CommitAsync();
+            return true;
+        }
+
+        public async Task AddContactToGroupAsync(int contactId, int groupId)
+        {
+            var existing = await _unitOfWork.ContactGroups.GetAsync(cg => cg.ContactId == contactId && cg.GroupId == groupId);
+            if (existing == null)
+            {
+                var contactGroup = new ContactGroup { ContactId = contactId, GroupId = groupId };
+                await _unitOfWork.ContactGroups.AddAsync(contactGroup);
+                await _unitOfWork.CommitAsync();
+            }
+        }
+
+        public async Task RemoveContactFromGroupAsync(int contactId, int groupId)
+        {
+            var contactGroup = await _unitOfWork.ContactGroups.GetAsync(cg => cg.ContactId == contactId && cg.GroupId == groupId);
+            if (contactGroup != null)
+            {
+                _unitOfWork.ContactGroups.Delete(contactGroup);
+                await _unitOfWork.CommitAsync();
+            }
         }
 
         public async Task<string> SaveProfilePhotoAsync(int contactId, byte[] fileBytes, string fileExtension)
         {
-            var contact = await _contactRepository.GetByIdAsync(contactId);
+            var contact = await _unitOfWork.Contacts.GetByIdAsync(contactId);
             if (contact == null)
-                throw new Exception("Contact not found");
+                throw new CustomValidationException(new List<string> { "Contact not found." });
 
             var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
             if (!Directory.Exists(uploadsFolder))
@@ -140,26 +117,16 @@ namespace PhoneDirectory.Application.Services
                 Directory.CreateDirectory(uploadsFolder);
             }
 
-            var fileName = Guid.NewGuid().ToString() + fileExtension;
+            var fileName = $"{Guid.NewGuid()}{fileExtension}";
             var filePath = Path.Combine(uploadsFolder, fileName);
 
             await File.WriteAllBytesAsync(filePath, fileBytes);
-
             contact.ProfilePhotoPath = $"/uploads/{fileName}";
-            await _contactRepository.UpdateAsync(contact);
-            await _contactRepository.SaveAsync();
+
+            _unitOfWork.Contacts.Update(contact);
+            await _unitOfWork.CommitAsync();
 
             return contact.ProfilePhotoPath;
-        }
-
-        public async Task<bool> DeleteContactAsync(int id)
-        {
-            var contact = await _contactRepository.GetByIdAsync(id);
-            if (contact == null)
-                return false;
-
-            await _contactRepository.DeleteAsync(id);
-            return true;
         }
     }
 }

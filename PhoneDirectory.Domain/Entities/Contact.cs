@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 
-
 namespace PhoneDirectory.Domain.Entities
 {
     public class Contact
@@ -16,7 +15,9 @@ namespace PhoneDirectory.Domain.Entities
         public string Note { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        public int? GroupId { get; set; } 
+        public Group Group { get; set; }   
+
         public ICollection<ContactGroup> ContactGroups { get; set; } = new List<ContactGroup>();
     }
-
 }

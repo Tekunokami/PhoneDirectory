@@ -7,26 +7,30 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PhoneDirectory.Infrastructure.Context;
 
+#nullable disable
+
 namespace PhoneDirectory.Infrastructure.Migrations
 {
     [DbContext(typeof(PhoneDirectoryDbContext))]
-    [Migration("20250804212113_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250828175232_InitialDatabaseSetup")]
+    partial class InitialDatabaseSetup
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "3.1.32")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128)
-                .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                .HasAnnotation("ProductVersion", "6.0.25")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
             modelBuilder.Entity("PhoneDirectory.Domain.Entities.Contact", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
                     b.Property<string>("Address")
                         .HasColumnType("nvarchar(max)");
@@ -39,6 +43,9 @@ namespace PhoneDirectory.Infrastructure.Migrations
 
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("GroupId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
@@ -53,6 +60,8 @@ namespace PhoneDirectory.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
 
                     b.ToTable("Contacts");
                 });
@@ -76,8 +85,15 @@ namespace PhoneDirectory.Infrastructure.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
@@ -88,6 +104,13 @@ namespace PhoneDirectory.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("PhoneDirectory.Domain.Entities.Contact", b =>
+                {
+                    b.HasOne("PhoneDirectory.Domain.Entities.Group", null)
+                        .WithMany("Contacts")
+                        .HasForeignKey("GroupId");
                 });
 
             modelBuilder.Entity("PhoneDirectory.Domain.Entities.ContactGroup", b =>
@@ -103,6 +126,22 @@ namespace PhoneDirectory.Infrastructure.Migrations
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Contact");
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("PhoneDirectory.Domain.Entities.Contact", b =>
+                {
+                    b.Navigation("ContactGroups");
+                });
+
+            modelBuilder.Entity("PhoneDirectory.Domain.Entities.Group", b =>
+                {
+                    b.Navigation("ContactGroups");
+
+                    b.Navigation("Contacts");
                 });
 #pragma warning restore 612, 618
         }

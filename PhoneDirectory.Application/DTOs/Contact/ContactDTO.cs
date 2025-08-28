@@ -7,7 +7,6 @@ namespace PhoneDirectory.Application.DTOs.Contact
     public class ContactDTO : UpdateContactDTO
     {
         public DateTime CreatedAt { get; set; }
-        public string Birthday { get; set; } 
     }
 
 

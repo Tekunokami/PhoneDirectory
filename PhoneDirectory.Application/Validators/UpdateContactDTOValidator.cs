@@ -1,24 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using FluentValidation;
 using PhoneDirectory.Application.DTOs.Contact;
 
 namespace PhoneDirectory.Application.Validators
 {
-    public class UpdateContactDTOValidator : IValidator<UpdateContactDTO>
+    public class UpdateContactDTOValidator : AbstractValidator<UpdateContactDTO>
     {
-        public ValidationResult Validate(UpdateContactDTO dto)
+        public UpdateContactDTOValidator()
         {
-            var result = new ValidationResult();
+            RuleFor(x => x.Id)
+                .GreaterThan(0).WithMessage("Geçerli bir ID gereklidir.");
 
-            if (dto.Id <= 0)
-                result.Errors.Add("Id must be a positive number.");
-
-            var createValidator = new CreateContactDTOValidator();
-            var createValidation = createValidator.Validate(dto);
-
-            result.Errors.AddRange(createValidation.Errors);
-            return result;
+            RuleFor(x => x).SetValidator(new CreateContactDTOValidator());
         }
     }
 }

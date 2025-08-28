@@ -6,12 +6,14 @@ namespace PhoneDirectory.Infrastructure.Context
     public class PhoneDirectoryDbContext : DbContext
     {
         public PhoneDirectoryDbContext(DbContextOptions<PhoneDirectoryDbContext> options)
-            : base(options) { }
+             : base(options)
+        {
+
+        }
 
         public DbSet<Contact> Contacts { get; set; }
         public DbSet<Group> Groups { get; set; }
-        public DbSet<ContactGroup> ContactGroups { get; set; }
-
+        public DbSet<ContactGroup> ContactGroups { get; set; } 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -20,17 +22,15 @@ namespace PhoneDirectory.Infrastructure.Context
 
             modelBuilder.Entity<ContactGroup>()
                 .HasOne(cg => cg.Contact)
-                .WithMany(c => c.ContactGroups)
+                .WithMany(c => c.ContactGroups) 
                 .HasForeignKey(cg => cg.ContactId);
 
             modelBuilder.Entity<ContactGroup>()
                 .HasOne(cg => cg.Group)
-                .WithMany(g => g.ContactGroups)
+                .WithMany(g => g.ContactGroups) 
                 .HasForeignKey(cg => cg.GroupId);
-
 
             base.OnModelCreating(modelBuilder);
         }
-
     }
 }

@@ -1,24 +1,19 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using PhoneDirectory.API.Middlewares;
+using PhoneDirectory.Application.Common.Mappings; 
 using PhoneDirectory.Application.Services;
 using PhoneDirectory.Domain.Interfaces;
+using PhoneDirectory.Infrastructure;
 using PhoneDirectory.Infrastructure.Context;
 using PhoneDirectory.Infrastructure.Repositories;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using NLog.Web;
 
 namespace PhoneDirectory.API
 {
@@ -40,7 +35,6 @@ namespace PhoneDirectory.API
                     sqlOptions => sqlOptions.MigrationsAssembly("PhoneDirectory.Infrastructure")
                 ));
 
-
             services.AddCors(options =>
             {
                 options.AddPolicy("AllowAll", builder =>
@@ -51,24 +45,30 @@ namespace PhoneDirectory.API
                 });
             });
 
-            services.AddControllers();
+            // AutoMapper Registration (This is a crucial missing piece)
+            services.AddAutoMapper(typeof(MappingProfile));
 
-
-
-
+            // Dependency Injection Registrations
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IContactRepository, ContactRepository>();
-            services.AddSwaggerGen();
-
+            services.AddScoped<IGroupRepository, GroupRepository>();
             services.AddScoped<IContactService, ContactService>();
+            services.AddScoped<IGroupService, GroupService>();
 
-
+            services.AddSwaggerGen();
         }
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseSwagger();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "PhoneDirectory API V1");
+                    c.RoutePrefix = string.Empty;
+                });
             }
 
             app.UseHttpsRedirection();
@@ -77,10 +77,9 @@ namespace PhoneDirectory.API
 
             app.UseRouting();
 
-            app.UseAuthorization();
-
             app.UseCors("AllowAll");
 
+            app.UseAuthorization();
 
             var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
             if (!Directory.Exists(uploadsPath))
@@ -88,30 +87,17 @@ namespace PhoneDirectory.API
                 Directory.CreateDirectory(uploadsPath);
             }
 
-
             app.UseStaticFiles();
-
             app.UseStaticFiles(new StaticFileOptions
             {
-                FileProvider = new PhysicalFileProvider(
-                    Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads")),
+                FileProvider = new PhysicalFileProvider(uploadsPath),
                 RequestPath = "/uploads"
-            });
-
-
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "PhoneDirectory API V1");
-                c.RoutePrefix = string.Empty;
             });
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
             });
-
-
         }
     }
 }

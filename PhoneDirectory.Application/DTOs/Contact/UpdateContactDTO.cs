@@ -7,7 +7,6 @@ namespace PhoneDirectory.Application.DTOs.Contact
     public class UpdateContactDTO : CreateContactDTO
     {
         public int Id { get; set; }
-        public string Birthday { get; set; }  
     }
 
 

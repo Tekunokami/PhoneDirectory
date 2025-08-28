@@ -6,13 +6,15 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using PhoneDirectory.Infrastructure.Context;
+using PhoneDirectory.Domain.Entities; 
+
 
 namespace PhoneDirectory.Infrastructure.Repositories
 {
     public class GenericRepository<T> : IRepository<T> where T : class
     {
         protected readonly PhoneDirectoryDbContext _context;
-        private readonly DbSet<T> _dbSet;
+        protected readonly DbSet<T> _dbSet;
 
         public GenericRepository(PhoneDirectoryDbContext context)
         {
@@ -20,24 +22,9 @@ namespace PhoneDirectory.Infrastructure.Repositories
             _dbSet = context.Set<T>();
         }
 
-        public async Task<List<T>> GetAllAsync()
-        {
-            return await _dbSet.ToListAsync();
-        }
-
-        public async Task<T> GetByIdAsync(int id)
-        {
-            return await _dbSet.FindAsync(id);
-        }
-
         public async Task AddAsync(T entity)
         {
             await _dbSet.AddAsync(entity);
-        }
-
-        public void Update(T entity)
-        {
-            _dbSet.Update(entity);
         }
 
         public void Delete(T entity)
@@ -45,14 +32,28 @@ namespace PhoneDirectory.Infrastructure.Repositories
             _dbSet.Remove(entity);
         }
 
-        public async Task<int> SaveAsync()
+        public async Task<List<T>> GetAllAsync()
         {
-            return await _context.SaveChangesAsync();
+            return await _dbSet.ToListAsync();
         }
 
 
+        public async Task<T> GetByIdAsync(int id)
+        {
+            return await _dbSet.FindAsync(id);
+        }
 
-        public async Task<List<T>> FindAsync(Expression<Func<T, bool>> predicate)
+        public void Update(T entity)
+        {
+            _dbSet.Update(entity);
+        }
+
+        public async Task<T> GetAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _dbSet.FirstOrDefaultAsync(predicate);
+        }
+
+        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
             return await _dbSet.Where(predicate).ToListAsync();
         }
