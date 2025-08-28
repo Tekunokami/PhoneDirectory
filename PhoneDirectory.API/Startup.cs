@@ -44,11 +44,8 @@ namespace PhoneDirectory.API
                            .AllowAnyHeader();
                 });
             });
-
-            // AutoMapper Registration (This is a crucial missing piece)
             services.AddAutoMapper(typeof(MappingProfile));
 
-            // Dependency Injection Registrations
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IContactRepository, ContactRepository>();

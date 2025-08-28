@@ -128,5 +128,13 @@ namespace PhoneDirectory.Application.Services
 
             return contact.ProfilePhotoPath;
         }
+
+        public async Task<List<ContactDTO>> GetContactsByGroupIdAsync(int groupId)
+        {
+            var contacts = await _unitOfWork.Contacts.GetContactsByGroupIdAsync(groupId);
+            return _mapper.Map<List<ContactDTO>>(contacts);
+        }
+
+
     }
 }

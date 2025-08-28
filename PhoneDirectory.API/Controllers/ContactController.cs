@@ -101,7 +101,25 @@ namespace PhoneDirectory.API.Controllers
             return Ok();
         }
 
+        [HttpGet("bygroup/{groupId}")]
+        public async Task<IActionResult> GetContactsByGroup(int groupId)
+        {
+            var contacts = await _contactService.GetContactsByGroupIdAsync(groupId);
+            return Ok(contacts);
+        }
 
+        [HttpPost("{contactId}/add-to-group/{groupId}")]
+        public async Task<IActionResult> AddToGroup(int contactId, int groupId)
+        {
+            await _contactService.AddContactToGroupAsync(contactId, groupId);
+            return Ok();
+        }
 
+        [HttpPost("{contactId}/remove-from-group/{groupId}")]
+        public async Task<IActionResult> RemoveFromGroup(int contactId, int groupId)
+        {
+            await _contactService.RemoveContactFromGroupAsync(contactId, groupId);
+            return Ok();
+        }
     }
 }

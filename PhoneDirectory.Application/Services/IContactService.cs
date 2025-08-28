@@ -14,5 +14,6 @@ namespace PhoneDirectory.Application.Services
         Task<string> SaveProfilePhotoAsync(int contactId, byte[] fileBytes, string fileExtension);
         Task AddContactToGroupAsync(int contactId, int groupId);
         Task RemoveContactFromGroupAsync(int contactId, int groupId);
+        Task<List<ContactDTO>> GetContactsByGroupIdAsync(int groupId);
     }
 }
